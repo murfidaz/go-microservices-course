@@ -1,1 +1,104 @@
 # go-microservices-course
+
+membuat aplikasi microservices menggunakan golang Tanpa Framework dan ORM, karena dengan golang saja sudah powerfull.
+
+apa saja yang didapat menggunakan pattern microservices?
+
+| Keunggulan | Kekurangan | Solusinya |
+| :--- | :--- | :--- |
+| independent deploys and scaling | far more moving parts to run | Docker Compose now, Kubernetes |
+| each service owns its data | no transacion can span two services | an outbox, sagas |
+| failures stay contained | the network fails: timeouts, retries, duplicates | deadline, idempotency |
+| clear boundaries | one request, logs in five places | distributed tracing |
+
+## Jika memulai sebuah produk, mulailah dengan teknik Modular Monolith
+pecah bagian yang perlu dipecah sajago mod , berikut batasan yang kita pecah pertamakali: identity, the ledger, money movement, notifications
+
+### Pecahkan berdasarkan bisnis proses, bukan berdasarkan hal teknis
+misalkan auth, wallet, transfers, notifications masing-masing memiliki API, Data dan Events. jadi tidak ada service yang bisa membaca table service lain
+
+# Stack 
+## Go 1.26
+- net/http
+- log/slog
+- context
+
+kenapa golang? karena golang itu:
+- **A single static binary**: dibuild menjadi 1 binary yang mana tanpa runtime, tanpa virtual machine
+- **Concurrency in the language**: support concurrency menggunakan goroutines yang tidak banyak memakan resource, serta context yang membawa deadline dan cancellation
+- **A strandard library for servers**: golang support library untuk server seperti, net/http, encoding/json, crypto, log/slog
+- **Boring, on purpose** golang membosankan karena sengaja, soalnya bahasa golang itu kecil, satu format, cepat dibuild, dan kompabilitas dari versi golang yang lama masih dijamin
+- **The language of the cloud** golang merupakah bahasa yang disukai oleh aplikasi cloud, seperti Docker, Kubernetes, Prometheus, Jaeger dan NATS itu ditulis menggunakan Golang, jadi bahasa golang sangat menjamin
+
+### Kekurangan Golang
+**The trade-off: explicit errors**: karena golang tidak mempunyai exception (try catch) maka sering menggunakan **if err != nil** dibanyak kodingan, dan setiap kodingan yang akan memungkikan terjadi error maka wajib menggunakannya
+
+### Alternative Golang
+- **Java - Kotlin - C#**: bahasa yang sudah lama digunakan, akan tetapi menggunakan runtimes yang berat dan banyak sekal framworks
+- **Node**: framework javascript yang awalnya cepat, akan tetapi CPU-heavy code
+- **Rust**: lebih banyak kendali, lebih banyak jaminan akan tetapi proses pembelajaranya lebih sulit untuk dipahami developer junior
+
+### Graceful shutdown (penting!!!)
+memberhentikan dengan aman adalah bagian dari pekerjaan setiap aplikasi
+- **Deploy, scale-downs, drained nodes**: aplikasi pertamakali akan menanyakan dengan sinyal SIGTERM
+  - **Stop accepting**: aplikasi berhenti menerima request dengan cara tutup listener: no new connection
+  - **Finish what's in flight**: aplikasi akan menunggu setiap request selesai prosesnya
+  - **Close the rest, and exit**: aplikasi akan menutup semua koneksi database pool, nats dll
+
+## gRPC
+- between services
+- protobuf
+
+## PostgreSQL
+- the ledger
+- pgx
+- sqlc
+
+## Redis
+- rate limits
+- idempotency cache
+
+## NATS JetStream
+- durable streams of events
+
+## Docker
+untuk image dan local infra(develop)
+
+## k6
+untuk load test
+
+## Kubernetes
+untuk deploy production
+
+# Tools Observability
+## OpenTelemetry
+trace from every hop
+
+## Jaeger
+untuk trace aplikasi
+
+## Mailpit
+aplikasi untuk fake email ketika development
+
+
+## Prometheus
+aplikasi untuk collect metric, scraped
+
+
+## Grafana
+aplikasi untuk menampilkan data metric
+
+
+# Struktur File & Folder
+```
+root/
+├── cmd/
+│   └── wallet/
+│       └── main.go
+├── docker-compose.yaml
+├── go.mod
+└── README.md
+```
+- ```go.mod``` file config golang
+- ```docker-compose.yaml``` digunakan untuk infra ketika develop aplikasi, dan juga sebagai dokumentasi infra apa saja yang kita gunakan
+- ```main.go``` file utama setiap service
