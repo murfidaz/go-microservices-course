@@ -38,13 +38,6 @@ kenapa golang? karena golang itu:
 - **Node**: framework javascript yang awalnya cepat, akan tetapi CPU-heavy code
 - **Rust**: lebih banyak kendali, lebih banyak jaminan akan tetapi proses pembelajaranya lebih sulit untuk dipahami developer junior
 
-### Graceful shutdown (penting!!!)
-memberhentikan dengan aman adalah bagian dari pekerjaan setiap aplikasi
-- **Deploy, scale-downs, drained nodes**: aplikasi pertamakali akan menanyakan dengan sinyal SIGTERM
-  - **Stop accepting**: aplikasi berhenti menerima request dengan cara tutup listener: no new connection
-  - **Finish what's in flight**: aplikasi akan menunggu setiap request selesai prosesnya
-  - **Close the rest, and exit**: aplikasi akan menutup semua koneksi database pool, nats dll
-
 ## gRPC
 - between services
 - protobuf
@@ -102,3 +95,54 @@ root/
 - ```go.mod``` file config golang
 - ```docker-compose.yaml``` digunakan untuk infra ketika develop aplikasi, dan juga sebagai dokumentasi infra apa saja yang kita gunakan
 - ```main.go``` file utama setiap service
+
+
+# Mulai
+
+## Episode 1
+### Graceful shutdown (penting!!!)
+memberhentikan dengan aman adalah bagian dari pekerjaan setiap aplikasi
+- **Deploy, scale-downs, drained nodes**: aplikasi pertamakali akan menanyakan dengan sinyal SIGTERM
+  - **Stop accepting**: aplikasi berhenti menerima request dengan cara tutup listener: no new connection
+  - **Finish what's in flight**: aplikasi akan menunggu setiap request selesai prosesnya
+  - **Close the rest, and exit**: aplikasi akan menutup semua koneksi database pool, nats dll
+
+## Episode 2
+### Double-entry bookkeeping
+adalah metode yang sudah ada sejak 500tahun yang lalu dengan cara **setiap pergerakan keuangan dicatat dua kali, ketika uang diterima dan ketika uang dikeluarkan**
+
+| Transaksi | Account | Debit | Credit |
+| :--- | :--- | :--- | :--- |
+| Transaki 1 - eko deposit 50.000 | Bank - Asset | 50.000 | |
+| | Dompet Eko - liablility | | 50.000|
+| Transaki 2 - eko bayar diki 2.000 | Dompet Eko - liability | 2.000 | |
+| | Dompet Diki - liablility | | 2.000|
+
+**di setiap transaksi: total debits = total credits**
+
+### Where does the balance live?
+Sebuah angka yang dapat diubah atau saldo yang diperoleh dari entri-entri
+
+#### A balance column (penggunaan yang salah)
+```
+UPDATE wallets
+SET ballance = ballance - 2000
+WHERE id = $1;
+```
+kenapa salah:
+- concurrent update bisa saling overwrite
+- tidak adanya riwayat: misalkan kenapa saldo sisa 42.00?
+- sebuah bug tersembuyi 
+- tidak bisa reconcile ulang
+
+#### Derived from entries (penggunan yang benar)
+```
+SELECT sum(CASE direction WHEN 'credit' THEN amount ELSE -amount END)
+FROM entries
+WHERE account_id =  $1;
+```
+kenapa benar:
+- Append-only: entries tidak pernah berubah
+- Setiap rupiah dijelaskan berdasarkan entri
+- Kesalahan diperbaiki dengan membalikkan transaksi (reversing transactions)
+- Cache dan snapshop bisa selalu dibuild ulang
