@@ -88,13 +88,19 @@ root/
 ├── cmd/
 │   └── wallet/
 │       └── main.go
+├── db/
+├── deploy/
 ├── docker-compose.yaml
 ├── go.mod
+├── Makefile
 └── README.md
 ```
 - ```go.mod``` file config golang
 - ```docker-compose.yaml``` digunakan untuk infra ketika develop aplikasi, dan juga sebagai dokumentasi infra apa saja yang kita gunakan
 - ```main.go``` file utama setiap service
+- ```db``` merupakan folder yang berhubungan dengan database postgres, seperti file migration
+- ```deploy``` merupakan folder yang digunakan ketika docker compose dijalankan atau digunakan juga ketika ci/cd
+- ```Makefile``` file script untuk memudahkan cmd
 
 
 # Mulai
@@ -146,3 +152,11 @@ kenapa benar:
 - Setiap rupiah dijelaskan berdasarkan entri
 - Kesalahan diperbaiki dengan membalikkan transaksi (reversing transactions)
 - Cache dan snapshop bisa selalu dibuild ulang
+
+### Money is an integer
+pada video menjelaskan untuk tipe data uang itu lebih baik menggunakan integer
+
+- contoh jika menggunakan float64 ```0.10 + 0.20 = 0.30000000000000004``` nilainya tidak sempurna menjadi 0.3
+- jadi simpanlah ke int64, contoh $19.99 disimpan ke int64 1999
+- int64 mempunyai nilai max: 9,222,372,036,854,775,807
+- postgres punya variabel numeric, akan tetapi golang tidak mempunyai variable decimal
