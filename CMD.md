@@ -28,3 +28,40 @@ cek tabel migrasi
 ```
 docker compose exec -T postgres psql -U payments -d wallet -c 'TABLE schema_migrations'
 ```
+
+# sqlc
+install sqlc
+```
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+```
+
+cek versi
+```
+sqlc version
+```
+
+generate sqlc, setelah meruba atau menambahkan file .sql
+```
+sqlc generate
+```
+
+# test
+jalankan test
+```
+go test ./...
+```
+
+menggunakan make karena sudah dimasukan
+```
+make test
+```
+
+verbose dengan make
+```
+make test TESTFLAGS='-v -run Unbalance'
+```
+
+cek data 
+```
+docker compose exec -T postgres psql -U payments -d wallet -c 'SELECT direction, sum(amount) FROM entries GROUP BY 1 ORDER BY 1'
+```

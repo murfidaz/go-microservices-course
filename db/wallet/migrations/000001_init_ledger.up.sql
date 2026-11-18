@@ -58,7 +58,7 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM entries WHERE transaction_id = tx_id) THEN
         RAISE EXCEPTION 'transaction % has no entries', tx_id
-            USING ERRCODE = 'check_validation';
+            USING ERRCODE = 'check_violation';
     END IF;
 
     IF EXISTS (
@@ -69,7 +69,7 @@ BEGIN
         HAVING sum(CASE direction WHEN 'debit' THEN amount ELSE -amount END) <> 0
     ) THEN
         RAISE EXCEPTION 'transaction % is not balanced', tx_id
-            USING ERRCODE = 'check_validation';
+            USING ERRCODE = 'check_violation';
     END IF;
 
     RETURN NULL;
