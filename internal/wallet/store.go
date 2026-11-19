@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/murfidaz/go-microservices-course/internal/platform/apperr"
 	"github.com/murfidaz/go-microservices-course/internal/wallet/walletdb"
 )
 
@@ -26,7 +27,7 @@ const (
 	Credit = walletdb.EntryDirectionCredit
 )
 
-var ErrAccountNotFound = errors.New("wallet: account not found")
+var ErrAccountNotFound = fmt.Errorf("account %w", apperr.ErrNotFound)
 
 // ini adalah data access layar, sering juga disebut repository.
 // ini membungkus sqlc queries dan database transactions

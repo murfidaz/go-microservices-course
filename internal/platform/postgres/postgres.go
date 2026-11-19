@@ -10,15 +10,15 @@ import (
 )
 
 // NewPool membuat sebuah connection pool untuk database dalam dsn, dan mengecek apakah database dapat dihubungi sebelum dikembalikan.
-func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+func NewPool(ctx context.Context, dsn string, maxConns int32) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("postgres: parse dsn: %w", err)
 	}
 
 	// ukuran Pool untuk minimal dan maksimal perlu diperhatikan
-	cfg.MinConns = 2
-	cfg.MaxConns = 10
+	cfg.MinConns = min(2, maxConns)
+	cfg.MaxConns = maxConns
 
 	// daur ulang koneksi sekarang dan nanti, jadi load akan rebalce ketika terjadi failover.
 	// jitter memberhentkan setiap koneksi dari reconnection pada saat yang bersamaan.

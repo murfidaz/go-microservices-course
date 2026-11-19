@@ -30,3 +30,10 @@ export WALLET_TEST_DATABASE_URL
 
 test:
 	@go test -count=1 $(TESTFLAGS) ./...
+
+.PHONY: run-wallet
+VERSION ?= $(shell git describe --always --dirty)
+
+run-wallet:
+	@go build -ldflags "-X main.version=$(VERSION)" -o bin/wallet ./cmd/wallet
+	@WALLET_DATABASE_URL="$(DB_URL)" ./bin/wallet

@@ -204,3 +204,61 @@ BEGIN -> INSERT -> INSERT x N -> COMMIT
 
 - **inTx(ctx, fn)** = begin - run fn with queries bound to the transaction - commit when fn return nill - roll back on an error or a panic
 - **Never mix the pool and the transaction inside fn** = a query on the pool runs outside the transaction, on another connection, and can't see its uncommitted rows
+
+
+## Episode 4
+Config, Logging & Errors
+- struktur konfigurasi sistem/env
+- struktur log dengan request id
+- middleware
+- error dengan informasi yang jelas
+
+### A middleware chain
+setiap request melewati **Layer** yang sama sebelum sampai ke sebuah handler
+```
+# Layer
+RequestID -> AccessLog -> Recover -> ServerMux -> handler
+```
+- RequestID = menerima atau membuat X-Request-ID, kemudian dimasukan kedalam context
+- AccessLog = method, path, status, duration, bytes
+- Recover = sebuah panic menjadi kode 500 dengan JSON error
+- ServeMux -> handler = GET /healthz, GET /readyz, dan lain-lain seperti berupa JSON 404
+
+**Middleware** itu adalah sebuah function, func(http.Handler) http.Handler, yang membungkus handler selanjutnya dan menjalankan semua kodingan sebelum dan setelahnya
+
+**Order matters**
+layer terluar melihat request pertama kali dan response dibagian akhir, access log harus bisa melihat error 500 yang meRecover writes
+
+### Configuration from the environment
+build yang sama berjalan dimanapun, hanya env yang berubah
+
+### Structured logging with log/slog
+key-value pairs daripada beberapa kalimat, jadi mesin bisa mencari mereka
+
+- pada Development log berupa TEXT
+- pada Production log berupa JSON
+- Levels = DEBUG, INFO, WARN, ERROR, dipilih berdasarkan LOG_LEVEL
+- Base Attributes = service dan versi pada setiap baris log
+- Handlers do the writings = sebuah format logger akan dibuat dan dibungkus oleh handler
+
+### Request IDs
+satu ID per request, pada setipa baris log yang terjadi, didalam setiap service yang tersentuh
+```
+Client -> Gateway -> Transfer service/ Wallet service
+```
+- Client misalkan ketika POST /transfers
+- Gateway akan membuat Request ID, misalkan X-Request-ID: 7Q2M...
+- Transfer service & Wallet service akan menggunakan header dari gateway dengan id yang sama pada dalam log
+
+jadi ketika kita mencari log untuk satu ID maka kita akan melihat seluruh riwayat yang terjadi, dan ketika client melaporkan error, request id pada body response akan membuat kita gampang mencarinya
+
+### Errors become HTTP in exactly one place
+Domain code mengatakan apa saja yang salah, dan HTTP layer menentukan bagaimana mengatakannya
+| Error | Status | Code |
+| :--- | :--- | :--- |
+| apperr.ErrNotFound | 404 | not_found |
+| apperr.ErrConflict | 409 | conflict |
+| *apperr.ValidationError | 422 | invalid_input |
+| malformed JSON body | 400 | bad_request |
+| body over 1 MiB | 413 | body_too_large |
+| anything else | 500 | internal |
